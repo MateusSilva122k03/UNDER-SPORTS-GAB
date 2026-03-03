@@ -10,10 +10,14 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - VITE_API_URL=${BACKEND_URL:-http://localhost:3001}
+      - VITE_API_URL=/api
     restart: unless-stopped
-    networks:
-      - bravio-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
 
   # Backend - API Node.js
   backend:
@@ -24,33 +28,26 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - PIX_API_KEY=${PIX_API_KEY}
-      - PIX_API_SECRET=${PIX_API_SECRET}
-      - FRONTEND_URL=${FRONTEND_URL}
+      - PORT=3001
+      - FRONTEND_URL=https://under-sports.recarga8.shop
     restart: unless-stopped
-    networks:
-      - bravio-network
-    depends_on:
-      - database
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls=true"
+      - "traefik.http.services.backend.loadbalancer.server.port=3001"
 
-  # Database - SQLite (para desenvolvimento) ou PostgreSQL (produção)
+  # Database - PostgreSQL
   database:
     image: postgres:15-alpine
     environment:
       - POSTGRES_DB=bravio
-      - POSTGRES_USER=${DB_USER:-bravio}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_USER=bravio
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme123}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
     restart: unless-stopped
-    networks:
-      - bravio-network
-
-networks:
-  bravio-network:
-    driver: bridge
 
 volumes:
   postgres_data:
