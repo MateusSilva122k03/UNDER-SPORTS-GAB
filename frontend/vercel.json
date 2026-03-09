@@ -3,6 +3,7 @@
   "installCommand": "npm install",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/blackcat-payment", "destination": "/api/blackcat-payment" }
+    { "source": "/api/blackcat-payment", "destination": "/api/blackcat-payment" },
+    { "source": "/api/buckpay-payment", "destination": "/api/buckpay-payment" }
   ]
 }
