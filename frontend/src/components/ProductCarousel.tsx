@@ -23,29 +23,41 @@ export default function ProductCarousel({ title, products }: ProductCarouselProp
   if (products.length === 0) return null;
 
   return (
-    <section className="py-10 lg:py-14 bg-zinc-950 text-white">
-      <div className="max-w-7xl mx-auto px-4 lg:px-6">
-        <SectionTitle title={title} className="mb-6 lg:mb-8" />
+    <section className="py-20 bg-black text-white overflow-hidden relative">
+      <div className="max-w-7xl mx-auto px-6">
+        <SectionTitle title={title} className="mb-12" />
 
         <div className="relative group">
-          {/* Left arrow */}
-          <button
-            onClick={() => scroll('left')}
-            className="hidden lg:flex absolute left-0 top-1/3 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 bg-zinc-800 hover:bg-zinc-700 items-center justify-center rounded-full text-zinc-400 hover:text-white shadow-lg opacity-40 group-hover:opacity-100 transition-all"
-            aria-label="Rolar para esquerda"
-          >
-            <ChevronLeft size={18} />
-          </button>
+          {/* Controls - Visíveis em mobile e desktop, posicionados nos cantos da tela */}
+          <div className="absolute top-[40%] -left-2 lg:-left-6 -translate-y-1/2 z-20">
+             <button
+              onClick={() => scroll('left')}
+              className="w-12 h-12 lg:w-14 lg:h-14 bg-black/50 backdrop-blur-xl border border-white/10 hover:border-white flex items-center justify-center transition-all text-white/80 hover:text-black hover:bg-white rounded-full shadow-2xl"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft size={24} strokeWidth={1.5} className="ml-[-2px]" />
+            </button>
+          </div>
+          
+          <div className="absolute top-[40%] -right-2 lg:-right-6 -translate-y-1/2 z-20">
+            <button
+              onClick={() => scroll('right')}
+              className="w-12 h-12 lg:w-14 lg:h-14 bg-black/50 backdrop-blur-xl border border-white/10 hover:border-white flex items-center justify-center transition-all text-white/80 hover:text-black hover:bg-white rounded-full shadow-2xl"
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={24} strokeWidth={1.5} className="mr-[-2px]" />
+            </button>
+          </div>
 
-          {/* Carousel track */}
+          {/* Carousel track (Suporta Swipe Mobile nativo via CSS Snap) */}
           <div
             ref={scrollRef}
-            className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-5 pb-2 -mx-4 px-4 lg:mx-0 lg:px-0"
+            className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-6 lg:gap-8 pb-8 -mx-6 px-6 lg:mx-0 lg:px-0"
           >
             {products.map((product, index) => (
               <div
                 key={product.id || index}
-                className="snap-start shrink-0 w-[155px] sm:w-[175px] md:w-[195px] lg:w-[230px]"
+                className="snap-start shrink-0 w-[220px] sm:w-[260px] md:w-[280px] lg:w-[320px]"
               >
                 <ProductCard
                   id={product.id}
@@ -56,15 +68,6 @@ export default function ProductCarousel({ title, products }: ProductCarouselProp
               </div>
             ))}
           </div>
-
-          {/* Right arrow */}
-          <button
-            onClick={() => scroll('right')}
-            className="hidden lg:flex absolute right-0 top-1/3 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 bg-zinc-800 hover:bg-zinc-700 items-center justify-center rounded-full text-zinc-400 hover:text-white shadow-lg opacity-40 group-hover:opacity-100 transition-all"
-            aria-label="Rolar para direita"
-          >
-            <ChevronRight size={18} />
-          </button>
         </div>
       </div>
     </section>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface BannerProps {
   image: string;
@@ -22,7 +23,7 @@ export default function Banner({ image, image2, image3, alt, alt2, alt3, classNa
     if (isPaused || images.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % images.length);
-    }, 5000);
+    }, 6000);
     return () => clearInterval(interval);
   }, [images.length, isPaused]);
 
@@ -33,74 +34,68 @@ export default function Banner({ image, image2, image3, alt, alt2, alt3, classNa
 
   return (
     <div
-      className={`w-full overflow-hidden relative bg-zinc-900 group ${className}`}
+      className={`w-full overflow-hidden relative bg-black group ${className}`}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Slides with repeat effect */}
-      {images.map((img, index) => (
-        <div
-          key={index}
-          className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-            index === currentIndex ? 'opacity-100' : 'opacity-0'
-          }`}
-          aria-hidden={index !== currentIndex}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentIndex}
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1] }}
+          className="absolute inset-0"
           style={{
-            backgroundImage: `url(${img})`,
+            backgroundImage: `url(${images[currentIndex]})`,
             backgroundRepeat: 'repeat',
             backgroundSize: 'contain',
             backgroundPosition: 'center'
           }}
           role="img"
-          aria-label={alts[index] || alt}
-        />
-      ))}
+          aria-label={alts[currentIndex] || alt}
+        >
+          {/* Vinheta leve para não deixar a imagem crua, mas sem os textos sobrepostos */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60 pointer-events-none" />
+        </motion.div>
+      </AnimatePresence>
 
-      {/* Prev / Next arrows — only if multiple slides */}
+      {/* Controls */}
       {images.length > 1 && (
         <>
           <button
             onClick={prev}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-zinc-950/60 hover:bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 border border-white/10 hover:border-white/40 flex items-center justify-center rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-500 backdrop-blur-md"
             aria-label="Slide anterior"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={20} strokeWidth={1} />
           </button>
           <button
             onClick={next}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-zinc-950/60 hover:bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 border border-white/10 hover:border-white/40 flex items-center justify-center rounded-full text-white opacity-0 group-hover:opacity-100 transition-all duration-500 backdrop-blur-md"
             aria-label="Próximo slide"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={20} strokeWidth={1} />
           </button>
         </>
       )}
 
-      {/* Dot indicators */}
-      {images.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
-          {images.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentIndex(index)}
-              className={`h-[3px] rounded-full transition-all duration-300 ${
-                index === currentIndex
-                  ? 'bg-white w-6'
-                  : 'bg-white/40 hover:bg-white/60 w-3'
-              }`}
-              aria-label={`Ir para slide ${index + 1}`}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* CSS for repeat + contain effect */}
-      <style>{`
-        .banner-img {
-          background-repeat: repeat !important;
-          background-size: contain !important;
-        }
-      `}</style>
+      {/* Progressive indicators */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 z-20">
+        {images.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            className="group py-2"
+          >
+            <div className={`h-0.5 rounded-full transition-all duration-700 ${
+              index === currentIndex
+                ? 'bg-white w-12'
+                : 'bg-white/20 hover:bg-white/40 w-4'
+            }`} />
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

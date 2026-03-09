@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { X, Copy, Check, QrCode, Loader2, MapPin } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { safePayService, PixPaymentResponse } from '../services/safepay';
+import { buckpayService, BuckpayPaymentResponse, CustomerData } from '../services/buckpay';
+import { trackInitiateCheckout, trackPurchase } from '../utils/pixel';
 
 interface CheckoutPixProps {
   isOpen: boolean;
@@ -18,23 +19,21 @@ interface AddressData {
   state: string;
 }
 
-// ── Mask helpers ──────────────────────────────────────────────────────────────
 const formatPhone    = (v: string) => { const n = v.replace(/\D/g, '').slice(0, 11); if (n.length <= 2) return `(${n}`; if (n.length <= 7) return `(${n.slice(0,2)}) ${n.slice(2)}`; return `(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`; };
 const formatCPF      = (n: string) => { if (n.length <= 3) return n; if (n.length <= 6) return `${n.slice(0,3)}.${n.slice(3)}`; if (n.length <= 9) return `${n.slice(0,3)}.${n.slice(3,6)}.${n.slice(6)}`; return `${n.slice(0,3)}.${n.slice(3,6)}.${n.slice(6,9)}-${n.slice(9)}`; };
 const formatCNPJ     = (n: string) => { if (n.length <= 2) return n; if (n.length <= 5) return `${n.slice(0,2)}.${n.slice(2)}`; if (n.length <= 8) return `${n.slice(0,2)}.${n.slice(2,5)}.${n.slice(5)}`; if (n.length <= 12) return `${n.slice(0,2)}.${n.slice(2,5)}.${n.slice(5,8)}/${n.slice(8)}`; return `${n.slice(0,2)}.${n.slice(2,5)}.${n.slice(5,8)}/${n.slice(8,12)}-${n.slice(12)}`; };
 const formatDocument = (v: string) => { const n = v.replace(/\D/g, ''); return n.length <= 11 ? formatCPF(n.slice(0,11)) : formatCNPJ(n.slice(0,14)); };
 const formatCEP      = (v: string) => { const n = v.replace(/\D/g, '').slice(0,8); return n.length <= 5 ? n : `${n.slice(0,5)}-${n.slice(5)}`; };
 
-// ── Input style ───────────────────────────────────────────────────────────────
 const INPUT = 'w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 focus:border-zinc-600 text-white px-3 py-2.5 text-sm focus:outline-none transition-all rounded-lg placeholder-zinc-600';
 const LABEL = 'block text-xs text-zinc-400 mb-1.5 font-medium uppercase tracking-wide';
 
 export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
   const { items, total, clearCart } = useCart();
-  const [customerData, setCustomerData] = useState({ name: '', email: '', phone: '', document: '' });
+  const [customerData, setCustomerData] = useState<CustomerData>({ name: '', email: '', phone: '', document: '' });
   const [addressData, setAddressData] = useState<AddressData>({ cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' });
   const [isLoadingCep, setIsLoadingCep] = useState(false);
-  const [paymentData, setPaymentData] = useState<PixPaymentResponse | null>(null);
+  const [paymentData, setPaymentData] = useState<BuckpayPaymentResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -58,23 +57,58 @@ export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
   if (!isOpen) return null;
 
   const handleCreatePayment = async () => {
-    if (!customerData.name || !customerData.email) { setError('Por favor, preencha nome e e-mail'); return; }
+    if (!customerData.name || !customerData.email || !customerData.document) { 
+      setError('Por favor, preencha nome, e-mail e CPF'); 
+      return; 
+    }
+    if (!addressData.cep || !addressData.city || !addressData.state) {
+      setError('Por favor, preencha o CEP, cidade e estado'); 
+      return; 
+    }
     setIsLoading(true); setError(null);
     try {
-      const externalId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const amountInCents = Math.round(total * 100);
-      const itemDescriptions = items.slice(0, 3).map(i => i.name).join(', ');
-      const description = items.length > 3 ? `${itemDescriptions} +${items.length - 3} itens` : itemDescriptions;
-      const response = await safePayService.createPixPayment(amountInCents, description, externalId);
+      const cartItems = items.map(item => ({
+        id: item.id,
+        name: item.size ? `${item.name} - Tamanho: ${item.size}` : item.name,
+        price: Math.round(item.price * 100),
+        quantity: item.quantity,
+        image: item.image
+      }));
+      
+      const response = await buckpayService.createPixPayment(cartItems, customerData);
       setPaymentData(response);
+      
+      // Rastreia início do checkout (InitiateCheckout)
+      trackInitiateCheckout({
+        items: items.map(item => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+        })),
+        total: total,
+      });
+      
+      // Rastreia compra (Purchase) - quando o pagamento é gerado
+      trackPurchase({
+        orderId: response.transactionId || `order_${Date.now()}`,
+        items: items.map(item => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        total: total,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar pagamento');
     } finally { setIsLoading(false); }
   };
 
   const handleCopyPix = () => {
-    if (paymentData?.pixCode) {
-      navigator.clipboard.writeText(paymentData.pixCode);
+    if (paymentData?.paymentData?.copyPaste) {
+      navigator.clipboard.writeText(paymentData.paymentData.copyPaste);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -89,13 +123,18 @@ export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
 
   const handleClose = () => { if (!paymentData) onClose(); };
 
+  const qrCodeImage = paymentData?.paymentData?.qrCodeBase64 
+    ? `data:image/png;base64,${paymentData.paymentData.qrCodeBase64}` 
+    : undefined;
+  const pixCode = paymentData?.paymentData?.copyPaste;
+  const expiresAt = paymentData?.paymentData?.expiresAt;
+
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
 
       <div className="absolute right-0 top-0 h-full w-full max-w-md bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <h2 className="font-bold text-base flex items-center gap-2.5">
             <QrCode size={18} className="text-zinc-400" />
@@ -109,7 +148,6 @@ export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {!paymentData ? (
             <>
-              {/* Order summary */}
               <div className="mb-6 bg-zinc-900 rounded-xl p-4">
                 <h3 className="font-bold text-xs uppercase tracking-widest text-zinc-400 mb-3">Resumo do Pedido</h3>
                 <div className="space-y-2 max-h-36 overflow-y-auto">
@@ -128,11 +166,9 @@ export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
                 </div>
               </div>
 
-              {/* Customer form */}
               <div className="space-y-4">
                 <h3 className="font-bold text-xs uppercase tracking-widest text-zinc-400">Dados do Cliente</h3>
 
-                {/* CPF - Primeiro campo */}
                 <div>
                   <label className={LABEL}>CPF *</label>
                   <input 
@@ -160,7 +196,6 @@ export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
                   <input type="tel" inputMode="tel" value={customerData.phone} onChange={e => setCustomerData({ ...customerData, phone: formatPhone(e.target.value) })} className={INPUT} placeholder="(00) 00000-0000" maxLength={15} autoComplete="tel" />
                 </div>
 
-                {/* Address */}
                 <div className="border-t border-zinc-800 pt-4 space-y-3">
                   <h3 className="font-bold text-xs uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                     <MapPin size={13} /> Endereço de Entrega
@@ -210,18 +245,17 @@ export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
                 <button
                   onClick={handleCreatePayment}
                   disabled={isLoading}
-                  className="w-full bg-white text-zinc-950 py-3.5 font-bold text-sm uppercase tracking-widest rounded-lg hover:bg-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-yellow-400 via-green-500 to-blue-500 text-white py-3.5 font-bold text-sm uppercase tracking-widest rounded-lg hover:from-yellow-500 hover:via-green-600 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30"
                 >
-                  {isLoading ? <><Loader2 size={18} className="animate-spin" /> Gerando QR Code...</> : 'Gerar QR Code PIX'}
+                  {isLoading ? <><Loader2 size={18} className="animate-spin" /> Gerando QR Code...</> : '🏆 Garanta Já - Copa 2026 🏆'}
                 </button>
               </div>
             </>
           ) : (
-            /* Payment QR */
             <div className="text-center">
               <div className="bg-white p-5 rounded-2xl inline-block mb-5 shadow-lg">
-                {paymentData.qrCodeImage ? (
-                  <img src={paymentData.qrCodeImage} alt="QR Code PIX" className="w-48 h-48" />
+                {qrCodeImage ? (
+                  <img src={qrCodeImage} alt="QR Code PIX" className="w-48 h-48" />
                 ) : (
                   <div className="w-48 h-48 flex items-center justify-center bg-zinc-100 rounded-lg">
                     <QrCode size={64} className="text-zinc-400" />
@@ -231,20 +265,20 @@ export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
 
               <div className="space-y-1 mb-6">
                 <p className="text-zinc-400 text-sm">
-                  Valor: <span className="text-white font-bold">R$&nbsp;{(paymentData.amount / 100).toFixed(2).replace('.', ',')}</span>
+                  Valor: <span className="text-white font-bold">R$&nbsp;{total.toFixed(2).replace('.', ',')}</span>
                 </p>
-                {paymentData.expiresAt && (
+                {expiresAt && (
                   <p className="text-zinc-500 text-sm">
-                    Expira em: {new Date(paymentData.expiresAt).toLocaleString('pt-BR')}
+                    Expira em: {new Date(expiresAt).toLocaleString('pt-BR')}
                   </p>
                 )}
               </div>
 
-              {paymentData.pixCode && (
+              {pixCode && (
                 <div className="mb-6 text-left">
                   <label className={LABEL}>Código PIX copia e cola</label>
                   <div className="flex gap-2">
-                    <input type="text" value={paymentData.pixCode} readOnly className={`${INPUT} text-xs`} />
+                    <input type="text" value={pixCode} readOnly className={`${INPUT} text-xs`} />
                     <button onClick={handleCopyPix} className="bg-zinc-800 hover:bg-zinc-700 px-3 rounded-lg transition-colors shrink-0" aria-label="Copiar código">
                       {copied ? <Check size={16} className="text-zinc-200" /> : <Copy size={16} className="text-zinc-400" />}
                     </button>
@@ -257,13 +291,6 @@ export default function CheckoutPix({ isOpen, onClose }: CheckoutPixProps) {
                   📱 Abra seu app do banco, escaneie o QR Code ou copie o código PIX para concluir o pagamento.
                 </p>
               </div>
-
-              <button
-                onClick={handleFinish}
-                className="w-full bg-white text-zinc-950 py-3.5 font-bold text-sm uppercase tracking-widest rounded-lg hover:bg-zinc-100 transition-colors"
-              >
-                Concluir Pedido
-              </button>
             </div>
           )}
         </div>

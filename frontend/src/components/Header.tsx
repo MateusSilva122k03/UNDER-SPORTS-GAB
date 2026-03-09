@@ -3,6 +3,7 @@ import { Search, User, ShoppingCart, Menu, X } from 'lucide-react';
 import { categories } from '../data/products_categorized';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface HeaderProps {
   activeCategory: number;
@@ -19,7 +20,7 @@ export default function Header({ activeCategory, onCategoryChange, onSearch }: H
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 24);
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -38,179 +39,148 @@ export default function Header({ activeCategory, onCategoryChange, onSearch }: H
     if (onSearch) onSearch(val);
   };
 
-  const toggleCart = () => {
-    setIsOpen(!isOpen);
-  };
-
   return (
     <header
-      className={`w-full sticky top-0 z-50 transition-all duration-300 ${
+      className={`w-full sticky top-0 z-50 transition-all duration-500 ${
         scrolled
-          ? 'bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/60'
-          : 'bg-zinc-950'
+          ? 'bg-black/80 backdrop-blur-xl border-b border-white/10 py-0'
+          : 'bg-black py-2'
       }`}
     >
-      {/* Shipping marquee — white bar */}
-      <div className="bg-white overflow-hidden">
-        <div className="animate-marquee whitespace-nowrap py-2 flex">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <span key={i} className="text-zinc-950 text-[10px] font-semibold uppercase mx-6 tracking-widest">
-              Frete Grátis em todos os produtos até a Copa &nbsp;·&nbsp; Entregamos em todo o Brasil
+      {/* Premium Marquee */}
+      <div className="bg-white py-1.5 overflow-hidden border-b border-white/10">
+        <motion.div 
+          animate={{ x: [0, -1000] }}
+          transition={{ repeat: Infinity, duration: 30, ease: "linear" }}
+          className="whitespace-nowrap flex items-center"
+        >
+          {Array.from({ length: 15 }).map((_, i) => (
+            <span key={i} className="text-black text-[9px] font-bold uppercase mx-12 tracking-[0.2em] flex items-center gap-2">
+              <span className="w-1 h-1 bg-black rounded-full" />
+              Frete Grátis em todos os produtos
+              <span className="w-1 h-1 bg-black rounded-full" />
+              Coleção Copa 2026
             </span>
           ))}
-        </div>
+        </motion.div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-6">
-        {/* Top bar */}
-        <div className="flex items-center justify-between h-16 lg:h-20">
-
-          {/* Mobile menu button */}
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between h-16 lg:h-24 transition-all duration-500">
+          
+          {/* Menu Button - Mobile */}
           <button
-            className="lg:hidden p-2 -ml-2 text-zinc-400 hover:text-white"
+            className="lg:hidden p-2 -ml-2 text-white/70 hover:text-white"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Menu"
           >
-            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          {/* Logo */}
-          <div
-            className="flex items-center cursor-pointer select-none"
+          {/* Logo - Centered on Mobile, Left on Desktop */}
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center cursor-pointer absolute left-1/2 -translate-x-1/2 lg:relative lg:left-0 lg:translate-x-0"
             onClick={() => navigate('/')}
           >
-            <img src="/Logo-Under.svg" alt="Under Sports" className="h-10 lg:h-12 w-auto" />
-          </div>
+            <img src="/Logo-Under.svg" alt="Under Sports" className="h-8 lg:h-10 w-auto brightness-200" />
+          </motion.div>
 
-          {/* Search — desktop */}
-          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-sm mx-8">
-            <div className="relative w-full">
+          {/* Nav - Desktop */}
+          <nav className="hidden lg:flex items-center gap-8 ml-12">
+            {categories.map((cat, index) => {
+              const isActive = activeCategory === index;
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => {
+                    onCategoryChange(index);
+                    if (onSearch) onSearch('');
+                    setSearchQuery('');
+                  }}
+                  className={`relative group py-2 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${
+                    isActive ? 'text-white' : 'text-white/40 hover:text-white'
+                  }`}
+                >
+                  {cat.name}
+                  {isActive && (
+                    <motion.div 
+                      layoutId="activeNav"
+                      className="absolute -bottom-1 left-0 right-0 h-px bg-white"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 lg:gap-6">
+            <div className="hidden lg:block relative group">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                placeholder="Buscar camisas, seleções..."
-                className="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 focus:border-zinc-600 text-sm text-white px-4 py-2.5 focus:outline-none focus:bg-zinc-900 placeholder-zinc-600 transition-all rounded-lg"
+                placeholder="BUSCAR"
+                className="bg-transparent border-b border-white/10 focus:border-white/40 text-[10px] tracking-widest text-white px-0 py-1 w-24 focus:w-48 transition-all duration-500 outline-none placeholder:text-white/20 uppercase font-bold"
               />
-              <button
-                type="submit"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                aria-label="Buscar"
-              >
-                <Search size={16} />
-              </button>
+              <Search size={14} className="absolute right-0 top-1.5 text-white/20 group-focus-within:text-white transition-colors" />
             </div>
-          </form>
 
-          {/* Action icons */}
-          <div className="flex items-center gap-3 lg:gap-4">
-            {/* Mobile search toggle */}
-            <button
-              className="lg:hidden p-2 text-zinc-400 hover:text-white"
-              onClick={() => setShowSearch(!showSearch)}
-              aria-label="Buscar"
-            >
-              <Search size={20} />
+            <button className="p-2 text-white/50 hover:text-white transition-colors">
+              <User size={18} strokeWidth={1.5} />
             </button>
 
             <button
-              className="hidden sm:block text-zinc-400 hover:text-white transition-colors p-1"
-              aria-label="Minha conta"
+              onClick={() => setIsOpen(!isOpen)}
+              className="relative p-2 text-white/50 hover:text-white transition-colors"
             >
-              <User size={20} />
-            </button>
-
-            <button
-              onClick={toggleCart}
-              className="relative text-zinc-400 hover:text-white transition-colors p-2"
-              aria-label="Carrinho"
-            >
-              <ShoppingCart size={20} />
-              {itemCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-white text-zinc-950 text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full leading-none">
-                  {itemCount > 9 ? '9+' : itemCount}
-                </span>
-              )}
+              <ShoppingCart size={18} strokeWidth={1.5} />
+              <AnimatePresence>
+                {itemCount > 0 && (
+                  <motion.span 
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="absolute top-1 right-1 bg-white text-black text-[8px] font-black w-3.5 h-3.5 flex items-center justify-center rounded-full"
+                  >
+                    {itemCount}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
           </div>
         </div>
-
-        {/* Mobile search bar */}
-        {showSearch && (
-          <form onSubmit={handleSearch} className="lg:hidden pb-3">
-            <div className="relative w-full">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Buscar camisas, seleções..."
-                autoFocus
-                className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-600 text-sm text-white px-4 py-2.5 focus:outline-none placeholder-zinc-600 transition-all rounded-lg"
-              />
-              <button
-                type="submit"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                aria-label="Buscar"
-              >
-                <Search size={16} />
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Category nav — desktop */}
-        <nav className="hidden lg:flex items-center gap-0.5 pb-3">
-          <button
-            onClick={() => { onCategoryChange(0); if (onSearch) onSearch(''); setSearchQuery(''); }}
-            className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-widest transition-all rounded-md ${
-              activeCategory === 0
-                ? 'bg-white text-zinc-950'
-                : 'text-zinc-500 hover:text-white hover:bg-zinc-800/70'
-            }`}
-          >
-            Todos
-          </button>
-          {categories.slice(1).map((cat, index) => (
-            <button
-              key={cat.key}
-              onClick={() => { onCategoryChange(index + 1); if (onSearch) onSearch(''); setSearchQuery(''); }}
-              className={`px-4 py-1.5 text-xs font-semibold uppercase tracking-widest transition-all rounded-md ${
-                activeCategory === index + 1
-                  ? 'bg-white text-zinc-950'
-                  : 'text-zinc-500 hover:text-white hover:bg-zinc-800/70'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </nav>
       </div>
 
-      {/* Mobile menu */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-zinc-800 bg-zinc-950">
-          <div className="px-4 py-3 space-y-1">
-            {categories.map((cat, index) => (
-              <button
-                key={cat.key}
-                onClick={() => {
-                  onCategoryChange(index);
-                  setMobileMenuOpen(false);
-                  if (onSearch) onSearch('');
-                  setSearchQuery('');
-                }}
-                className={`block w-full text-left px-4 py-3 text-sm font-semibold uppercase tracking-wider transition-colors rounded-lg ${
-                  activeCategory === index
-                    ? 'bg-white text-zinc-950'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="lg:hidden fixed inset-0 top-[110px] bg-black z-40 px-6 py-12"
+          >
+            <div className="flex flex-col gap-8">
+              {categories.map((cat, index) => (
+                <button
+                  key={cat.key}
+                  onClick={() => {
+                    onCategoryChange(index);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`text-2xl font-bold uppercase tracking-tighter text-left ${
+                    activeCategory === index ? 'text-white' : 'text-white/20'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

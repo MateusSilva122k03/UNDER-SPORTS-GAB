@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
-import WhatsAppButton from './components/WhatsAppButton';
 import ProductGrid from './components/ProductGrid';
 import ProductGridItem from './components/ProductGridItem';
 import ProductCarousel from './components/ProductCarousel';
@@ -9,6 +8,8 @@ import Banner from './components/Banner';
 import Cart from './components/Cart';
 import Footer from './components/Footer';
 import ProductDetail from './pages/ProductDetail';
+import WhatsAppButton from './components/WhatsAppButton';
+import CopaEliteSection from './components/CopaEliteSection';
 import { categories } from './data/products_categorized';
 
 export default function App() {
@@ -42,8 +43,9 @@ export default function App() {
   const isSearching = searchQuery.trim().length > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans flex flex-col">
+    <div className="min-h-screen bg-black text-white font-sans flex flex-col selection:bg-white selection:text-black">
       <Cart />
+      <WhatsAppButton />
 
       <Routes>
         <Route
@@ -57,31 +59,33 @@ export default function App() {
               />
 
               <main className="flex-1">
-                {/* Hero banner */}
-                {!isSearching && (
+                {/* Hero banner - oculto na seção da copa ou pesquisa para dar mais destaque ao tema */}
+                {!isSearching && currentCategory.key !== 'copa_mundo_2026' && (
                   <Banner
-                    image="https://image2url.com/r2/default/images/1772522214535-fa9c5069-03cb-4539-8891-b4e9b6b3b399.jpg"
-                    image2="https://image2url.com/r2/default/images/1772525824688-d2f07865-fe13-477d-ba96-961e86ccd654.jpg"
-                    image3="https://image2url.com/r2/default/images/1772525923016-79c592f3-9d7d-4c63-b840-1ebad1118293.jpg"
+                    image="/banner1.jpg"
+                    image2="/banner2.jpg"
+                    image3="/banner3.jpg"
                     alt="Copa do Mundo 2026 — Coleção Exclusiva"
                     alt2="Bravio — Coleção 2026"
                     alt3="Bravio — Modelos Exclusivos"
-                    className="h-[240px] sm:h-[320px] md:h-[400px] lg:h-[500px]"
+                    className="h-[400px] sm:h-[500px] md:h-[600px] lg:h-[750px]"
                   />
                 )}
 
                 {isSearching ? (
                   /* Search results */
-                  <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8 lg:py-12">
-                    <h2 className="text-xl lg:text-2xl font-bold mb-1">
-                      Resultados para &ldquo;{searchQuery}&rdquo;
-                    </h2>
-                    <p className="text-zinc-500 text-sm mb-8">
-                      {filteredProducts?.length || 0} produto(s) encontrado(s)
-                    </p>
+                  <div className="max-w-7xl mx-auto px-6 py-20">
+                    <div className="mb-16">
+                      <h2 className="text-4xl lg:text-6xl font-bold uppercase tracking-tighter mb-4">
+                        Resultados para &ldquo;{searchQuery}&rdquo;
+                      </h2>
+                      <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">
+                        {filteredProducts?.length || 0} Peça(s) Encontrada(s)
+                      </p>
+                    </div>
 
                     {filteredProducts && filteredProducts.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-8">
                         {filteredProducts.map((product, index) => (
                           <ProductGridItem
                             key={product.id || index}
@@ -93,34 +97,40 @@ export default function App() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-16">
-                        <p className="text-zinc-500 text-lg">Nenhum produto encontrado</p>
-                        <p className="text-zinc-600 text-sm mt-2">Tente outro termo de busca</p>
+                      <div className="text-center py-32 border-t border-white/5">
+                        <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em]">Nenhuma peça corresponde à sua busca</p>
+                        <button 
+                          onClick={() => setSearchQuery('')}
+                          className="mt-8 text-[11px] font-bold uppercase tracking-widest border-b border-white/10 hover:border-white pb-1 transition-all"
+                        >
+                          Limpar Busca
+                        </button>
                       </div>
                     )}
                   </div>
 
                 ) : currentCategory.products.length === 0 ? (
-                  <div className="text-center py-16">
-                    <p className="text-zinc-500 text-xl">Em breve novos produtos...</p>
+                  <div className="text-center py-32">
+                    <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em]">Novidades Chegando em Breve</p>
                   </div>
 
+                ) : currentCategory.key === 'copa_mundo_2026' ? (
+                  <CopaEliteSection products={shuffledProducts} />
                 ) : (
-                  <>
+                  <div className="space-y-24 py-20">
                     <ProductCarousel
                       title={currentCategory.name}
                       products={shuffledProducts.slice(0, 20)}
                     />
                     <ProductGrid
-                      title="Mais Modelos"
+                      title="O Acervo"
                       products={shuffledProducts.slice(20)}
                     />
-                  </>
+                  </div>
                 )}
               </main>
 
               <Footer />
-              <WhatsAppButton />
             </>
           }
         />

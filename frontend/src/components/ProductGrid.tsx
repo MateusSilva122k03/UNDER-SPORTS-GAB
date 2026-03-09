@@ -11,11 +11,11 @@ export default function ProductGrid({ title, products, className = '' }: Product
   if (products.length === 0) return null;
 
   return (
-    <section className={`py-10 lg:py-14 bg-zinc-950 text-white ${className}`}>
-      <div className="max-w-7xl mx-auto px-4 lg:px-6">
-        {title && <SectionTitle title={title} className="mb-6 lg:mb-8" />}
+    <section className={`py-20 bg-black text-white ${className}`}>
+      <div className="max-w-7xl mx-auto px-6">
+        {title && <SectionTitle title={title} className="mb-16" />}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-8 gap-y-16">
           {products.map((product, index) => (
             <ProductCard
               key={product.id || index}

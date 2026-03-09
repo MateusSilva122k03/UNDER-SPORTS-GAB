@@ -1,6 +1,6 @@
-import { type MouseEvent, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ProductGridItemProps {
   id: string;
@@ -10,57 +10,70 @@ interface ProductGridItemProps {
 }
 
 const FALLBACK =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='500' viewBox='0 0 400 500'%3E%3Crect fill='%23171717' width='400' height='500'/%3E%3Ctext fill='%23444' font-family='sans-serif' font-size='14' x='50%25' y='50%25' text-anchor='middle'%3ESem imagem%3C/text%3E%3C/svg%3E";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='500' viewBox='0 0 400 500'%3E%3Crect fill='%23050505' width='400' height='500'/%3E%3Ctext fill='%23333' font-family='sans-serif' font-size='14' x='50%25' y='50%25' text-anchor='middle'%3ESem imagem%3C/text%3E%3C/svg%3E";
 
 export default function ProductGridItem({ id, name, image, price }: ProductGridItemProps) {
   const navigate = useNavigate();
-  const { addItem } = useCart();
   const [imageError, setImageError] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = () => navigate(`/product/${id}`);
 
-  const handleAddToCart = (e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    addItem({ id, name, image, price, size: 'M', quantity: 1 });
-  };
-
   return (
-    <div
+    <motion.div
       onClick={handleClick}
-      className="bg-zinc-900 rounded-lg overflow-hidden cursor-pointer group ring-1 ring-transparent hover:ring-zinc-700 transition-all duration-200"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="group cursor-pointer relative flex flex-col"
     >
-      {/* Image */}
-      <div className="aspect-[3/4] bg-zinc-800 relative overflow-hidden">
-        <img
+      {/* Image Container */}
+      <div className="aspect-[3/4] bg-[#0A0A0A] relative overflow-hidden mb-4 border border-white/5 transition-colors group-hover:border-white/20">
+        <motion.img
           src={imageError ? FALLBACK : image}
           alt={name}
-          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]"
+          animate={{ scale: isHovered ? 1.05 : 1 }}
+          transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}
+          className="w-full h-full object-cover"
           onError={() => setImageError(true)}
           loading="lazy"
         />
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
-          <button
-            onClick={handleAddToCart}
-            className="w-full bg-white text-zinc-950 py-2 text-xs font-bold uppercase tracking-widest rounded-md hover:bg-zinc-100 transition-colors"
-          >
-            Adicionar
-          </button>
-        </div>
+        {/* Hover Action Overlay (visual apenas) */}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center p-6 pointer-events-none"
+            >
+              <span className="text-white text-[11px] font-black uppercase tracking-[0.3em] border-b border-white pb-1 shadow-black drop-shadow-lg">
+                Ver Peça
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Badge - Example for Exclusive items */}
+        {name.toLowerCase().includes('copa') && (
+          <div className="absolute top-3 left-3 bg-white text-black px-2 py-0.5 text-[8px] font-black uppercase tracking-widest z-10">
+            Exclusivo
+          </div>
+        )}
       </div>
 
-      {/* Text */}
-      <div className="p-3">
-        <h3 className="text-sm font-medium text-zinc-200 line-clamp-2 mb-1 leading-snug group-hover:text-white transition-colors">
+      {/* Product Info */}
+      <div className="space-y-1">
+        <h3 className="text-[11px] lg:text-[12px] font-bold uppercase tracking-wider text-white/90 group-hover:text-white transition-colors line-clamp-1">
           {name}
         </h3>
-        <div className="flex flex-col gap-0.5">
-          <p className="text-white font-bold text-base">
-            R$&nbsp;{price.toFixed(2).replace('.', ',')}
-          </p>
-        </div>
+        <p className="text-[10px] lg:text-[11px] font-medium tracking-[0.1em] text-white/40">
+          R$&nbsp;{price.toFixed(2).replace('.', ',')}
+        </p>
       </div>
-    </div>
+    </motion.div>
   );
 }

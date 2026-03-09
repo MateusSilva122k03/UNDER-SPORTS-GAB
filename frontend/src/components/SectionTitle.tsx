@@ -10,22 +10,21 @@ interface SectionTitleProps {
 
 export default function SectionTitle({ title, subtitle, className = '', action }: SectionTitleProps) {
   return (
-    <div className={`flex items-end justify-between gap-4 ${className}`}>
+    <div className={`flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-white/5 pb-6 ${className}`}>
       <div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-[3px] h-5 bg-white rounded-full shrink-0" />
-          <h2 className="text-lg lg:text-xl font-bold uppercase tracking-widest text-white">
-            {title}
-          </h2>
-        </div>
+        <h2 className="text-3xl lg:text-5xl font-bold uppercase tracking-tighter text-white leading-none">
+          {title}
+        </h2>
         {subtitle && (
-          <p className="text-zinc-500 text-sm ml-[18px]">{subtitle}</p>
+          <p className="text-white/40 text-[10px] lg:text-[12px] uppercase tracking-[0.2em] font-bold mt-3">
+            {subtitle}
+          </p>
         )}
       </div>
       {action && (
         <button
           onClick={action.onClick}
-          className="text-zinc-400 hover:text-white text-xs uppercase tracking-widest shrink-0 underline underline-offset-4 transition-colors"
+          className="text-white/40 hover:text-white text-[10px] font-black uppercase tracking-[0.2em] shrink-0 transition-colors border-b border-white/10 hover:border-white pb-1"
         >
           {action.label}
         </button>
